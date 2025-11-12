@@ -1,0 +1,57 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: api_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: api_spring
+      MYSQL_USER: spring
+      MYSQL_PASSWORD: secret
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: .
+    container_name: api_spring
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: api_spring
+      DB_USER: spring
+      DB_PASS: secret
+      APP_CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000"
+      APP_JWT_SECRET: "supersecreto-superlargo-min32chars-para-hmac"
+      APP_JWT_ISSUER: api-spring
+      APP_JWT_EXPIRATION_SECONDS: "3600"
+      APP_UPLOAD_DIR: "/data/uploads"
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      - "8081:8081"
+    volumes:
+      - uploads:/data/uploads
+    restart: unless-stopped
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    depends_on: [db]
+    ports:
+      - "8082:8080"
+    restart: unless-stopped
+
+volumes:
+  dbdata:
+  uploads:
